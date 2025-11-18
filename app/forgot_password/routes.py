@@ -873,61 +873,399 @@
 #     return await show_reset_form(token, message, "green")
 
 
-from fastapi import APIRouter, Depends, HTTPException, Form, Request
+# from fastapi import APIRouter, Depends, HTTPException, Form, Request
+# from fastapi.responses import HTMLResponse
+# from sqlalchemy.orm import Session
+# from datetime import datetime, timedelta
+# from jose import jwt, JWTError
+# from app.database import get_db
+# from app.signup.models import User
+# from app.utils.email_service import send_reset_email
+# from passlib.context import CryptContext
+# from pydantic import BaseModel
+# import os
+
+# router = APIRouter(tags=["Forgot Password"])
+
+# pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# SECRET_KEY = os.getenv("SECRET_KEY", "mysecretkey123")
+# ALGORITHM = "HS256"
+
+
+# # --------------------------------------------------------------------------
+# # 1️⃣ Forgot Password Schema
+# # --------------------------------------------------------------------------
+# class ForgotPasswordRequest(BaseModel):
+#     email: str
+
+
+# # --------------------------------------------------------------------------
+# # 2️⃣ Send Reset Link API
+# # --------------------------------------------------------------------------
+# @router.post("/forgot-password/request")
+# async def request_password_reset(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
+#     user = db.query(User).filter(User.email == data.email).first()
+#     if not user:
+#         raise HTTPException(status_code=404, detail="Email not found")
+
+#     token_data = {"sub": user.email, "exp": datetime.utcnow() + timedelta(minutes=30)}
+#     token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
+
+#     reset_link = f"http://192.168.7.7:6500/forgot-password/reset?token={token}"
+#     send_reset_email(user.email, reset_link)
+
+#     return {"message": "Reset link sent!"}
+
+
+# # --------------------------------------------------------------------------
+# # 3️⃣ Reset Password Page (NO REFRESH VERSION)
+# # --------------------------------------------------------------------------
+# @router.get("/forgot-password/reset")
+# async def show_reset_form(token: str):
+#     try:
+#         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+#         email = payload.get("sub")
+#     except JWTError:
+#         return HTMLResponse("<h3>❌ Invalid or expired link</h3>")
+
+#     html = f"""
+#     <!DOCTYPE html>
+#     <html>
+#     <head>
+#         <title>Reset Password</title>
+#         <style>
+#             body {{
+#                 font-family: Arial;
+#                 background: #6b8df5;
+#                 height: 100vh;
+#                 display: flex;
+#                 justify-content: center;
+#                 align-items: center;
+#                 margin: 0;
+#             }}
+#             .box {{
+#                 width: 420px;
+#                 background: white;
+#                 padding: 30px;
+#                 border-radius: 12px;
+#                 text-align: center;
+#             }}
+#             label {{ display: block; text-align: left; margin-top: 12px; }}
+#             input {{
+#                 width: 100%;
+#                 padding: 10px;
+#                 border-radius: 6px;
+#                 border: 1px solid #ccc;
+#                 margin-top: 6px;
+#             }}
+#             button {{
+#                 width: 100%;
+#                 padding: 12px;
+#                 background: #5563DE;
+#                 color: white;
+#                 border: none;
+#                 border-radius: 6px;
+#                 font-size: 16px;
+#                 margin-top: 15px;
+#                 cursor: pointer;
+#             }}
+#             .msg {{
+#                 margin-top: 15px;
+#                 font-weight: bold;
+#                 display: none;
+#             }}
+#         </style>
+#     </head>
+
+#     <body>
+#         <div class="box">
+#             <h2>🔒 Reset Your Password</h2>
+
+#             <div id="msg" class="msg"></div>
+
+#             <form id="resetForm">
+#                 <input type="hidden" name="token" value="{token}">
+
+#                 <label>Email</label>
+#                 <input type="email" name="email" value="{email}" readonly>
+
+#                 <label>New Password</label>
+#                 <input type="password" id="new_password" name="new_password" required>
+
+#                 <label>Confirm Password</label>
+#                 <input type="password" id="confirm_password" name="confirm_password" required>
+
+#                 <button type="submit">Reset Password</button>
+#             </form>
+#         </div>
+
+#         <script>
+#         document.getElementById("resetForm").addEventListener("submit", async function (e) {{
+#             e.preventDefault();
+
+#             let formData = new FormData(this);
+
+#             let msgBox = document.getElementById("msg");
+#             msgBox.style.display = "block";
+
+#             let res = await fetch("/forgot-password/reset", {{
+#                 method: "POST",
+#                 body: formData
+#             }});
+
+#             let data = await res.json();
+
+#             msgBox.innerHTML = data.message;
+#             msgBox.style.color = data.color;
+
+#             if (data.status === "success") {{
+#                 document.getElementById("new_password").value = "";
+#                 document.getElementById("confirm_password").value = "";
+#             }}
+#         }});
+#         </script>
+
+#     </body>
+#     </html>
+#     """
+
+#     return HTMLResponse(html)
+
+
+# # --------------------------------------------------------------------------
+# # 4️⃣ Password Reset Logic (AJAX RESPONSE)
+# # --------------------------------------------------------------------------
+# @router.post("/forgot-password/reset")
+# async def reset_password(
+#     token: str = Form(...),
+#     email: str = Form(...),
+#     new_password: str = Form(...),
+#     confirm_password: str = Form(...),
+#     db: Session = Depends(get_db),
+# ):
+
+#     try:
+#         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+#         email_from_token = payload.get("sub")
+#         if email != email_from_token:
+#             return {"status": "error", "message": "❌ Email does not match", "color": "red"}
+#     except JWTError:
+#         return {"status": "error", "message": "❌ Invalid or expired token", "color": "red"}
+
+#     if new_password != confirm_password:
+#         return {"status": "error", "message": "❌ Passwords do not match", "color": "red"}
+
+#     user = db.query(User).filter(User.email == email).first()
+#     if not user:
+#         return {"status": "error", "message": "❌ User not found", "color": "red"}
+
+#     user.hashed_password = pwd_context.hash(new_password)
+#     db.commit()
+
+#     return {"status": "success", "message": "✅ Password reset successful! you can now log in", "color": "green"}
+
+# from fastapi import APIRouter, Depends, Form
+# from fastapi.responses import HTMLResponse
+# from sqlalchemy.orm import Session
+# from app.database import get_db
+# from app.signup.models import User
+# from app.utils.email_service import send_reset_email
+# from passlib.context import CryptContext
+# from pydantic import BaseModel
+# from app.reset_request import ResetRequest
+
+# router = APIRouter(tags=["Forgot Password"])
+
+# pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# # ----------------------------------------------------------------------------------------
+# # 1️⃣ REQUEST RESET (NO TOKEN, NO EMAIL IN URL)
+# # ----------------------------------------------------------------------------------------
+
+
+# class ForgotPasswordRequest(BaseModel):
+#     email: str
+
+
+# @router.post("/forgot-password/request")
+# async def request_password_reset(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
+#     user = db.query(User).filter(User.email == data.email).first()
+#     if not user:
+#         return {"status": "error", "message": "Email not found"}
+
+#     # Store reset request
+#     reset = ResetRequest(email=data.email)
+#     db.add(reset)
+#     db.commit()
+
+#     # Send simple link (NO token, NO email param)
+#     reset_link = "http://192.168.7.7:6500/forgot-password/reset"
+#     send_reset_email(user.email, reset_link)
+
+#     return {"status": "success", "message": "Reset link sent successfully!"}
+
+
+# # ----------------------------------------------------------------------------------------
+# # 2️⃣ SHOW RESET FORM (AUTO-FILLED FIXED EMAIL)
+# # ----------------------------------------------------------------------------------------
+# @router.get("/forgot-password/reset")
+# async def show_reset_form(db: Session = Depends(get_db)):
+
+#     # Get latest reset request
+#     req = db.query(ResetRequest).order_by(ResetRequest.id.desc()).first()
+#     email_value = req.email if req else ""
+
+#     html = f"""
+#     <!DOCTYPE html>
+#     <html>
+#     <head>
+#         <title>Reset Password</title>
+#         <style>
+#             body {{ background:#6b8df5; height:100vh; display:flex; justify-content:center;
+#                     align-items:center; margin:0; font-family:Arial; }}
+#             .box {{ width:420px; background:white; padding:30px; border-radius:12px;
+#                     box-shadow:0 0 12px rgba(0,0,0,0.2); }}
+#             label {{ margin-top:12px; display:block; font-weight:bold; }}
+#             input {{ width:100%; padding:10px; border-radius:6px; margin-top:6px; border:1px solid #ccc; }}
+#             button {{ width:100%; padding:12px; background:#5563DE; color:white;
+#                       border:none; border-radius:6px; margin-top:15px; cursor:pointer; }}
+#             .msg {{ margin-top:15px; font-size:15px; font-weight:bold; display:none; }}
+#         </style>
+#     </head>
+
+#     <body>
+#         <div class="box">
+#             <h2>🔒 Reset Your Password</h2>
+
+#             <div id="msg" class="msg"></div>
+
+#             <form id="resetForm">
+
+#                 <label>Email</label>
+#                 <input type="email" id="email" name="email" value="{email_value}" readonly required>
+
+#                 <label>New Password</label>
+#                 <input type="password" id="new_password" name="new_password" required>
+
+#                 <label>Confirm Password</label>
+#                 <input type="password" id="confirm_password" name="confirm_password" required>
+
+#                 <button type="submit">Reset Password</button>
+#             </form>
+#         </div>
+
+#         <script>
+#         document.getElementById("resetForm").addEventListener("submit", async function(e) {{
+#             e.preventDefault();
+
+#             let formData = new FormData(this);
+#             let msgBox = document.getElementById("msg");
+#             msgBox.style.display = "block";
+
+#             let res = await fetch("/forgot-password/reset", {{
+#                 method: "POST",
+#                 body: formData
+#             }});
+
+#             let data = await res.json();
+
+#             msgBox.innerHTML = data.message;
+#             msgBox.style.color = data.color;
+
+#             if (data.status === "success") {{
+#                 document.getElementById("new_password").value = "";
+#                 document.getElementById("confirm_password").value = "";
+#             }}
+#         }});
+#         </script>
+#     </body>
+#     </html>
+#     """
+
+#     return HTMLResponse(html)
+
+
+# # ----------------------------------------------------------------------------------------
+# # 3️⃣ PROCESS PASSWORD RESET
+# # ----------------------------------------------------------------------------------------
+# @router.post("/forgot-password/reset")
+# async def reset_password(
+#     email: str = Form(...),
+#     new_password: str = Form(...),
+#     confirm_password: str = Form(...),
+#     db: Session = Depends(get_db),
+# ):
+
+#     # Check reset request exists
+#     req = db.query(ResetRequest).filter(ResetRequest.email == email).first()
+#     if not req:
+#         return {"status": "error", "message": "❌ No reset request found", "color": "red"}
+
+#     if new_password != confirm_password:
+#         return {"status": "error", "message": "❌ Passwords do not match", "color": "red"}
+
+#     user = db.query(User).filter(User.email == email).first()
+#     if not user:
+#         return {"status": "error", "message": "❌ User not found", "color": "red"}
+
+#     # Update password
+#     user.hashed_password = pwd_context.hash(new_password)
+
+#     # Delete reset request
+#     db.delete(req)
+#     db.commit()
+
+#     return {"status": "success", "message": "✅ Password updated successfully! you can now log in ", "color": "green"}
+
+
+from fastapi import APIRouter, Depends, Form
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
-from jose import jwt, JWTError
 from app.database import get_db
 from app.signup.models import User
 from app.utils.email_service import send_reset_email
 from passlib.context import CryptContext
 from pydantic import BaseModel
-import os
+from app.reset_request import ResetRequest
 
-router = APIRouter(tags=["Forgot Password"])
+router = APIRouter(prefix="/forgot-password", tags=["Forgot Password"])
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-SECRET_KEY = os.getenv("SECRET_KEY", "mysecretkey123")
-ALGORITHM = "HS256"
 
-
-# --------------------------------------------------------------------------
-# 1️⃣ Forgot Password Schema
-# --------------------------------------------------------------------------
+# -----------------------------------------------------
+# 1️⃣ REQUEST RESET LINK (send email)
+# -----------------------------------------------------
 class ForgotPasswordRequest(BaseModel):
     email: str
 
 
-# --------------------------------------------------------------------------
-# 2️⃣ Send Reset Link API
-# --------------------------------------------------------------------------
-@router.post("/forgot-password/request")
+@router.post("/request")
 async def request_password_reset(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
+
     user = db.query(User).filter(User.email == data.email).first()
     if not user:
-        raise HTTPException(status_code=404, detail="Email not found")
+        return {"status": "error", "message": "Email not found"}
 
-    token_data = {"sub": user.email, "exp": datetime.utcnow() + timedelta(minutes=30)}
-    token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
+    reset = ResetRequest(email=data.email)
+    db.add(reset)
+    db.commit()
 
-    reset_link = f"http://192.168.7.7:6500/forgot-password/reset?token={token}"
+    reset_link = "http://192.168.7.7:6500/forgot-password/reset"
     send_reset_email(user.email, reset_link)
 
-    return {"message": "Reset link sent!"}
+    return {"status": "success", "message": "Reset link sent successfully!"}
 
 
-# --------------------------------------------------------------------------
-# 3️⃣ Reset Password Page (NO REFRESH VERSION)
-# --------------------------------------------------------------------------
-@router.get("/forgot-password/reset")
-async def show_reset_form(token: str):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email = payload.get("sub")
-    except JWTError:
-        return HTMLResponse("<h3>❌ Invalid or expired link</h3>")
+# -----------------------------------------------------
+# 2️⃣ SHOW RESET FORM (UI SAME AS YOUR UPLOADED IMAGE)
+# -----------------------------------------------------
+@router.get("/reset")
+async def show_reset_form(db: Session = Depends(get_db)):
+
+    req = db.query(ResetRequest).order_by(ResetRequest.id.desc()).first()
+    email_value = req.email if req else ""
 
     html = f"""
     <!DOCTYPE html>
@@ -936,76 +1274,90 @@ async def show_reset_form(token: str):
         <title>Reset Password</title>
         <style>
             body {{
-                font-family: Arial;
-                background: #6b8df5;
-                height: 100vh;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                margin: 0;
+                background:#000;
+                color:white;
+                font-family:Arial;
+                padding:40px;
+                display:flex;
+                justify-content:center;
             }}
-            .box {{
+            .container {{
                 width: 420px;
-                background: white;
-                padding: 30px;
+                margin-top: 6%;
+                background: #111;
+                padding: 25px;
                 border-radius: 12px;
-                text-align: center;
+                box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
             }}
-            label {{ display: block; text-align: left; margin-top: 12px; }}
+            h2 {{
+                font-size:22px,
+                font-weight:bold;
+                margin-bottom:15px;
+            }}
+            label {{
+                display:block;
+                margin-top:14px;
+                font-size:14px;
+                font-weight:bold;
+            }}
             input {{
-                width: 100%;
-                padding: 10px;
-                border-radius: 6px;
-                border: 1px solid #ccc;
-                margin-top: 6px;
+                width:100%;
+                padding:12px;
+                margin-top:6px;
+                background:#222;
+                color:white;
+                border:1px solid #333;
+                border-radius:8px;
             }}
             button {{
-                width: 100%;
-                padding: 12px;
-                background: #5563DE;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                font-size: 16px;
-                margin-top: 15px;
-                cursor: pointer;
+                width:160px;
+                padding:12px;
+                margin-top:20px;
+                background:white;
+                color:black;
+                font-weight:bold;
+                border:none;
+                border-radius:8px;
+                cursor:pointer;
+                float:right;
             }}
-            .msg {{
-                margin-top: 15px;
-                font-weight: bold;
-                display: none;
+            #msg {{
+                margin-top:15px;
+                font-size:15px;
+                font-weight:bold;
+                display:none;
             }}
         </style>
     </head>
 
     <body>
-        <div class="box">
-            <h2>🔒 Reset Your Password</h2>
+        <div class="container">
+            <h2>Forgot password</h2>
 
-            <div id="msg" class="msg"></div>
+            <p>Password must be at least 6 characters long and include letters,
+               numbers and special characters (e.g., !@$%).</p>
+
+            <div id="msg"></div>
 
             <form id="resetForm">
-                <input type="hidden" name="token" value="{token}">
-
                 <label>Email</label>
-                <input type="email" name="email" value="{email}" readonly>
+                <input type="email" id="email" name="email" value="{email_value}" readonly required>
 
                 <label>New Password</label>
                 <input type="password" id="new_password" name="new_password" required>
 
-                <label>Confirm Password</label>
+                <label>Re-Enter Password</label>
                 <input type="password" id="confirm_password" name="confirm_password" required>
 
-                <button type="submit">Reset Password</button>
+                <button type="submit">Submit</button>
             </form>
         </div>
 
         <script>
-        document.getElementById("resetForm").addEventListener("submit", async function (e) {{
+        document.getElementById("resetForm").addEventListener("submit", async function(e) {{
             e.preventDefault();
 
             let formData = new FormData(this);
-
             let msgBox = document.getElementById("msg");
             msgBox.style.display = "block";
 
@@ -1025,7 +1377,6 @@ async def show_reset_form(token: str):
             }}
         }});
         </script>
-
     </body>
     </html>
     """
@@ -1033,25 +1384,20 @@ async def show_reset_form(token: str):
     return HTMLResponse(html)
 
 
-# --------------------------------------------------------------------------
-# 4️⃣ Password Reset Logic (AJAX RESPONSE)
-# --------------------------------------------------------------------------
-@router.post("/forgot-password/reset")
+# -----------------------------------------------------
+# 3️⃣ PROCESS RESET
+# -----------------------------------------------------
+@router.post("/reset")
 async def reset_password(
-    token: str = Form(...),
     email: str = Form(...),
     new_password: str = Form(...),
     confirm_password: str = Form(...),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db)
 ):
 
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email_from_token = payload.get("sub")
-        if email != email_from_token:
-            return {"status": "error", "message": "❌ Email does not match", "color": "red"}
-    except JWTError:
-        return {"status": "error", "message": "❌ Invalid or expired token", "color": "red"}
+    req = db.query(ResetRequest).filter(ResetRequest.email == email).first()
+    if not req:
+        return {"status": "error", "message": "❌ No reset request found", "color": "red"}
 
     if new_password != confirm_password:
         return {"status": "error", "message": "❌ Passwords do not match", "color": "red"}
@@ -1061,6 +1407,8 @@ async def reset_password(
         return {"status": "error", "message": "❌ User not found", "color": "red"}
 
     user.hashed_password = pwd_context.hash(new_password)
+
+    db.delete(req)
     db.commit()
 
-    return {"status": "success", "message": "✅ Password reset successful! you can now log in", "color": "green"}
+    return {"status": "success", "message": "✅ Password updated successfully!", "color": "green"}
